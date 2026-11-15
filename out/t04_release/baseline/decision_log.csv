@@ -1,0 +1,2 @@
+ts,scope,status,canonical,reason_code,reason,owner,evidence
+2026-11-15T11:20:08+00:00,t04,HOLD,HOLD,BASELINE_ONLY,Naive baseline without offset correction: never release on baseline.,Vu Van Dang (Core Algorithm & Pipeline Lead),

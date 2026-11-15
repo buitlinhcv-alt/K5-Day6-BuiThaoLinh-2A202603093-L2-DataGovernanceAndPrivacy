@@ -1,0 +1,36 @@
+{
+  "track": "t04",
+  "run_name": "poc",
+  "status": 0,
+  "seed": 42,
+  "offline": true,
+  "input": "fixtures\\t04_sensor_sync",
+  "output": "out\\t04_release\\poc",
+  "pipeline": "src.pipeline",
+  "config_hash": "21e79acddaa3",
+  "git_sha": null,
+  "runtime_seconds": 0.286,
+  "stats": {
+    "n_paired": 3518,
+    "n_dropout": 52,
+    "offset_ms": -33.333333333333336,
+    "offset_fit_split": "dev",
+    "offset_fit_status": "inconsistent_dev_drift",
+    "drift_ms_per_s": 0.75,
+    "max_dev_fit_residual_ms": 46.666666666666664,
+    "n_items": 3570,
+    "n_reviewed": 20,
+    "accuracy_proxy": 0.9743,
+    "n_valid_pairs": 1709
+  },
+  "machine": {
+    "python": "3.13.5",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "processor": "Intel64 Family 6 Model 126 Stepping 5, GenuineIntel"
+  },
+  "output_check": {
+    "pred_file": "out\\t04_release\\poc\\pairs.csv",
+    "exists": true,
+    "missing_columns": []
+  }
+}

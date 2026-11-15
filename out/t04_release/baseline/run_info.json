@@ -1,0 +1,26 @@
+{
+  "track": "t04",
+  "run_name": "baseline",
+  "status": 0,
+  "seed": 42,
+  "offline": true,
+  "input": "fixtures\\t04_sensor_sync",
+  "output": "out\\t04_release\\baseline",
+  "pipeline": "src.examples.t04_naive_baseline",
+  "config_hash": "0738e48cfd43",
+  "git_sha": null,
+  "runtime_seconds": 0.0623,
+  "stats": {
+    "n_items": 3570
+  },
+  "machine": {
+    "python": "3.13.5",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "processor": "Intel64 Family 6 Model 126 Stepping 5, GenuineIntel"
+  },
+  "output_check": {
+    "pred_file": "out\\t04_release\\baseline\\pairs.csv",
+    "exists": true,
+    "missing_columns": []
+  }
+}

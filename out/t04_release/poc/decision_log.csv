@@ -1,0 +1,3 @@
+ts,scope,status,canonical,reason_code,reason,owner,evidence
+2026-11-15T11:20:14+00:00,t04,HOLD,HOLD,SYNC_ACCURACY_BELOW_THRESHOLD,Pair Accuracy@50ms proxy = 97.4%; threshold=90%. Offset fit status=inconsistent_dev_drift. 1709/1754 dev frames OK. Dropout nhiều hoặc clock offset chưa hội tụ. Kiểm tra lại IMU data.,Vu Van Dang (Core Algorithm & Pipeline Lead),
+2026-11-15T12:25:07+00:00,t04,HOLD,HOLD,SYNC_ACCURACY_BELOW_THRESHOLD,Pair Accuracy@50ms proxy = 97.4%; threshold=90%. Offset fit status=inconsistent_dev_drift. 1709/1754 dev frames OK. Dropout nhiều hoặc clock offset chưa hội tụ. Kiểm tra lại IMU data.,Vu Van Dang (Core Algorithm & Pipeline Lead),
