@@ -1,133 +1,93 @@
-# Group Report — Day 06 Data Lab (Field-to-Release PoC)
+# Group Report — T04 Sensor Sync Guard
 
-> Điền đầy đủ, cụ thể, không viết chung chung. Mọi con số phải lấy từ file do script sinh ra
-> (`reports/metrics_*.json`, `reports/table1_baseline_vs_poc.md`) — không gõ tay, không làm tròn mất đơn vị.
-> 3–5 trang (hoặc README + report.md tương đương).
+> Kiểm tra ngày 2026-11-14: **chưa đủ điều kiện chốt bài**. Pipeline đã chuyển sang split theo thời gian và fit drift trên dev; guard hiện buộc HOLD khi fit không nhất quán. Metric chính thức vẫn bị chặn do thiếu GT, và bản release mới chưa được review.
 
 ## 00 · Header
 
-| Mục | Giá trị |
+| Mục | Giá trị đã kiểm tra |
 |---|---|
-| Group ID | G__ |
-| Challenge | T__ · ______________________ |
-| Thành viên (5–6) + vai trò | 1. ____ (Lead/Integrator) · 2. ____ (Data & fixtures) · 3. ____ (Core algorithm) · 4. ____ (QA/metric) · 5. ____ (Review + report) · 6. ____ |
-| Git URL | ____ |
-| Tag `demo-180m` (commit) | ____ |
-| Tag `final-24h` (commit) | ____ |
-| Deadline (giờ VN) | ____ |
+| Group ID | 2A202603046, 2A202603093 |
+| Track | T04 — Sensor Sync Guard |
+| Thành viên khai báo | Vũ Văn Đăng — Core Algorithm & Pipeline Lead<br>Bùi Thảo Linh — Phân tích & Viết Báo Cáo |
+| Owner cấu hình | Vu Van Dang, Bui Thao Linh |
+| Commit nền trước thay đổi | f76780c; code/report hiện tại sẽ nằm trong commit mới sau khi kiểm tra |
+| Tag demo-180m | Commit f76780c; tagger Test User; 2026-11-14 16:25:46 +07:00 |
+| Tag final-24h | Chưa tồn tại |
+| Deadline đã khai báo trước đó | 2026-11-15 17:00 GMT+7; cần đối chiếu lịch lớp |
+## 01 · Bài toán và contract
 
-## 01 · Problem statement
+Ghép camera khoảng 30 Hz với IMU 100 Hz sau khi chuyển giây sang mili-giây, ước lượng lệch clock và giữ frame nghi vấn ở trạng thái HOLD. Sai timestamp có thể làm sensor fusion sử dụng sai sự kiện.
 
-- Ai bị ảnh hưởng / ai chịu hậu quả khi hệ thống sai? ____
-- Điểm nghẽn cụ thể: ____
-- Đầu vào → đầu ra: ____
-- Tiêu chí GO / HOLD / REWORK (chốt trước khi chạy eval): ____
-- Giả định của nhóm (cần DPO/legal/domain owner xác nhận): ____
+Đã đọc toàn bộ `docs/tracks/T04.md` và `fixtures/t04_sensor_sync/README_units.md`. Đầu ra bắt buộc là `pairs.csv` với `frame_id,imu_t_ms`; ô IMU trống biểu thị HOLD. Đề yêu cầu plot offset theo thời gian, năm cặp nghi vấn để người vận hành xác nhận và drift tuyến tính ở mốc final.
 
-## 02 · Data & provenance
+## 02 · Dữ liệu và provenance
 
-| Split | N | Nguồn / link | License | Synthetic? |
-|---|---|---|---|---|
-| dev | | | | |
-| eval / heldout | | | | |
+Demo chỉ đọc input `fixtures/t04_sensor_sync/`: 3.570 camera frames, 11.850 IMU samples và sáu nhãn segment. Manifest ghi **CC0-1.0**, synthetic. Khẳng định CC-BY-4.0/CARLA/nuScenes trong báo cáo cũ không được manifest hỗ trợ.
 
-- Schema & class mapping: ____
-- Seed: 42 · Cách chia split (theo scene/group/segment?): ____
-- `manifest.csv` verified (sha256): có / không — lệnh: `python -m tools.verify_manifests`
-- Dữ liệu thật dùng (nếu có) và cách xây GT cho nó: ____
+Preflight xác minh checksum của 14 fixture manifests và guard offline: 0 FAIL, 2 WARN về dữ liệu/model tùy chọn không cần cho T04. Seed 42; không tải model hoặc dùng ảnh người/biển số thật.
 
-## 03 · Research & design
+## 03 · Thiết kế hiện tại và điểm chưa đạt
 
-- 2–3 references (URL + ngày xem) và **vì sao** chọn kỹ thuật: ____
-- Sơ đồ data flow (input → process → rank/QC → review → decision → report): ____
-- Thành phần offline (model/weights + checksum + license nếu có): ____
-- Trade-offs đã cân nhắc: ____
+Load + checksum → chia cửa sổ thời gian 20 giây → fit cross-correlation và offset/drift tuyến tính trên cửa sổ dev → nearest IMU + gap filtering → queue → review → decision.
 
-## 04 · Baseline vs PoC
+Đã sửa lỗi chia theo số hàng: cửa sổ 20 giây neo theo thời gian IMU, fit dev trim vùng biên để hạn chế lẫn mẫu eval; frame vùng biên được đánh dấu boundary. Fit drift tuyến tính dùng tâm các cửa sổ dev. Nếu residual vượt `dropout_tol_ms=30`, fit bị đánh dấu không đáng tin và decision chuyển HOLD.
 
-- Baseline (mô tả, version/config, commit): ____
-- PoC (mô tả, version/config, commit): ____
-- Cùng budget / cùng heldout / cùng seed: xác nhận ____
+Giới hạn còn lại: peak tương quan cần đánh giá thêm độ mơ hồ trên dữ liệu được phép; không có GT để khẳng định offset ước lượng đúng sự kiện. Regression tests bao phủ split, drift, fit không nhất quán, ca biên IMU và tham số không hợp lệ.
 
-**Bảng 1 · Baseline vs PoC & hard slices** — dán output của
-`python -m src.compare reports/metrics_baseline.json reports/metrics_poc.json`:
+## 04 · Baseline và PoC
 
-| Metric (unit) | Baseline | PoC | Δ & chú thích |
-|---|---|---|---|
-| Primary: ______ | ____ | ____ | ____; higher/lower? |
-| Hard-slice: ______ | ____ | ____ | ____; N=__ |
-| Review@B / miss / FP | ____ | ____ | ____; B=__ |
-| Runtime / 100 items | ____ | ____ | ____; CPU=__ |
+Baseline `src.examples.t04_naive_baseline` ghép nearest timestamp và áp cutoff hữu hạn theo tolerance đã cấu hình. Baseline và PoC dùng chung input/seed/offline; thiếu GT nên chưa thể kết luận PoC cải thiện.
 
-## 05 · Evaluation protocol
+Phiên demo đã review: [t04_demo.json](t04_demo.json), [t04_demo.html](t04_demo.html). Bản release sạch, chưa review: [t04_release.json](t04_release.json), [t04_release.html](t04_release.html):
 
-- Công thức primary metric, đơn vị đánh giá, TP/FP/FN, denominator: ____ (xem `reports/metric_contract.md`)
-- Threshold / budget B / K và lúc chốt: ____
-- Độ bất định (CI/bootstrap/variance) khi N nhỏ: ____
-- Lệnh evaluate chính xác: `python -m src.evaluate --track t__ --pred ... --out ...`
+| Chẩn đoán toàn bộ input | Baseline | PoC |
+|---|---:|---:|
+| Frame có cặp IMU | 3523 | 3518 |
+| Frame HOLD | 47 | 52 |
+| Hiệu chỉnh clock | 0 ms | −33,33 ms tại mốc tham chiếu |
+| Pair Accuracy@50ms trên GT eval | Chưa xác minh | Chưa xác minh |
 
-## 06 · Result slices
+HOLD là quyết định của thuật toán, không phải số dropout đúng theo GT. Không suy ra accuracy/recall/cải thiện từ số frame ghép được. Runtime của từng lần chạy nằm trong JSON/HTML.
 
-| Slice | N | Baseline | PoC | Ghi chú |
-|---|---|---|---|---|
-| | | | | |
-| | | | | |
+## 05 · Đánh giá chính thức
 
-- Failure case 1 (ảnh/metadata + root cause): ____
-- Failure case 2: ____
-- Latency / compute (máy, CPU, ms/item): ____
+Evaluator lấy mẫu số là frame có GT partner trên eval; HOLD ở frame có GT partner tính là sai. Thiếu `fixtures/t04_sensor_sync/gt/gt_pairs.csv`, lệnh evaluate trả exit 2 rõ ràng.
 
-## 07 · Human & decision
+Các `metrics_baseline.json`, `metrics_poc.json`, `table1_baseline_vs_poc.md` cũ được giữ để đối chiếu, **không được coi là kết quả đã xác thực**. Baseline dùng mẫu số 3570, PoC dùng 3521; config/extra rỗng, thiếu đường dẫn GT/split mà evaluator hiện tại ghi. `src.compare` chỉ trình bày JSON, không xác minh metric. Các tuyên bố “100%”, Wilson CI và hard slices trong bản trước được rút khỏi kết luận.
 
-- Review queue (file, B, cách ưu tiên): ____
-- Cách override + audit log (`out/audit_log.jsonl`): ____
-- Decision policy + `reason_code` + owner: ____
-- Khi nào HOLD/REWORK thay vì tự động release: ____
+## 06 · Các trường hợp cần xem
 
-## 08 · Reproduce & tests
+HTML hiển thị residual theo thời gian, offset các block được code gắn dev và bảng tra cứu toàn bộ frame. Queue 20 frame có timestamp đã hiệu chỉnh, IMU trái/phải, gap và lý do HOLD. Fixture T04 chỉ có metadata cảm biến, không chứa ảnh camera.
 
-```bash
-make setup          # hoặc: python -m venv .venv && pip install -r requirements.txt
-python -m src.main --input fixtures/<track> --config configs/lab.yaml --output out/ --offline --seed 42
-python -m src.evaluate --track t__ --pred out/<file> --out reports/metrics_poc.json
-pytest -q
-```
+Các ca cần hoàn tất: sai đơn vị s/ms; nối qua dropout; đúng timestamp nhưng sai sự kiện; reset và drift liên tục. Code phát hiện bước lùi lớn hơn 200 ms; bước lùi nhỏ được sort và log warning. Chưa xử lý toàn bộ reset.
 
-- Output của `pytest -q`: ____
-- Máy / CPU / OS / Python: ____ · git sha: ____
+## 07 · Human review và quyết định
 
-## 09 · Limitations & ethics
+Phiên `out/t04_demo/poc` có 20/20 dòng approve và 20 ghi chú; tên reviewer được ẩn danh trong [bằng chứng công bố](review_evidence_anonymized.csv). ID/score/reason khớp queue của phiên đó, pipeline chạy offline và audit ghi 20 sự kiện `review:approve`. Vì các quyết định giữ trạng thái hiện tại nên output cặp/HOLD không đổi. Review dựa trên metadata timestamp/IMU; không có ảnh hoặc GT để xác minh sự kiện. Release mới tại `out/t04_release/poc` chưa được review và queue đã thay đổi; không dùng review cũ cho phiên này.
 
-- Rủi ro pháp lý / PII / license: ____
-- Điều chưa biết; false alarms; nếu scale 10× thì sao: ____
-- Không tuyên bố "đạt GDPR / luật Việt Nam" từ checklist tự động; giả định cần DPO/legal xác nhận: ____
-- Kế hoạch cải tiến: ____
+File cũ `out/poc/review_queue_reviewed.csv` không còn thuộc queue hiện tại và không dùng làm bằng chứng. Review edit timestamp vẫn bị từ chối vì chưa có kiểm lại timestamp/residual an toàn.
 
-## 10 · Team contribution
+Decision release hiện HOLD do `inconsistent_dev_drift`; proxy dev 97,43% không phải accuracy và không được dùng làm metric chính thức.
 
-**Bảng 2 · Individual contribution evidence** (đối chiếu với `git shortlog -sne --all` và `reports/team_contributions.csv`)
+## 08 · Cách chạy và xem kết quả
 
-| Học viên | Git author/email | Module / vai trò | Commit SHA / diff chứng minh | Trình bày? |
-|---|---|---|---|---|
-| Member 1 | | Integration / CLI | | |
-| Member 2 | | Data + GT | | |
-| Member 3 | | Core algorithm | | |
-| Member 4 | | Metric + tests | | |
-| Member 5 | | Review queue + report | | |
-| Member 6 (nếu có) | | Research / ablation / debate | | |
+Xem [t04_run_guide.md](t04_run_guide.md). Chạy `python -m src.t04_demo`, mở `reports/t04_demo.html` bằng trình duyệt. Trang không dùng CDN/API/máy chủ.
 
-## 11 · References
+Máy hiện có Python 3.14.0; README khuyến nghị 3.11–3.13, nên chưa xác nhận setup mới trên phiên bản khuyến nghị. Preflight: 0 FAIL, 2 WARN. Sau thay đổi: **70 passed, 39 skipped in 19.27s** với `OPENBLAS_NUM_THREADS=1`, `PYTHONDONTWRITEBYTECODE=1`; test cần GT được skip do thiếu overlay. Edge headless đã kiểm tra hiển thị, bộ lọc và CSV export; chi tiết ở [submission_check.md](submission_check.md).
 
-| URL | Ngày xem | 1–2 dòng ý nghĩa (không chép nguyên văn) |
-|---|---|---|
-| | | |
+## 09 · Giới hạn và quản trị
 
----
+Không dùng PII thật, không tuyên bố đạt GDPR/luật Việt Nam. Threshold hiện có được giữ nguyên trong lượt kiểm tra; chưa dùng GT eval để tune. Thời điểm freeze ghi trong contract cũ là lời khai cần bằng chứng, không chứng minh được thứ tự freeze trước đánh giá.
 
-**Bảng 3 · Checklist chốt khi nộp**
+Các blocker còn lại (GT chính thức, tag theo mốc, xác minh Git author) ở [submission_check.md](submission_check.md).
 
-- [ ] Link repo và tag cuối cùng trong README; input mẫu không chứa PII thật.
-- [ ] Đúng 1 lệnh run, 1 lệnh evaluate, 1 lệnh tests; không cần download khi chạy.
-- [ ] Có baseline/PoC metrics, ≥1 failure case, reviewer evidence, decision log.
-- [ ] Có license/source provenance, data splits, seed, offline environment, GT/eval N.
-- [ ] Mỗi thành viên có ≥1 commit thực chất và được nêu minh bạch trong bảng trên.
+## 10 · Đóng góp và Git evidence
+
+Các commit lịch sử có Git author `Test User <test@example.com>`, chưa khớp thành viên khai báo. Không sửa lịch sử hoặc giả nhận danh tính; commit mới giữ author cấu hình hiện tại. `team_contributions.csv` ghi đóng góp khai báo, không thay thế Git evidence. Tag demo cũ vẫn trỏ f76780c; chưa tạo final-24h.
+
+## 11 · Nguồn đối chiếu
+
+- `docs/tracks/T04.md`: contract, split thời gian, baseline, drift, review.
+- `fixtures/t04_sensor_sync/README_units.md`, `manifest.csv`: đơn vị, nguồn, license.
+- `src/metrics/tracks.py::eval_t04`, `src/metrics/timing.py`: metric chính thức.
+- `README.md`: offline, GT guard, Git evidence và nộp report.
