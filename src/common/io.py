@@ -48,12 +48,14 @@ def set_seed(seed: int = 42) -> np.random.Generator:
     return np.random.default_rng(seed)
 
 
-def sha256_file(path: str | os.PathLike, chunk: int = 1 << 20) -> str:
-    h = hashlib.sha256()
+def sha256_file(path: str | os.PathLike, chunk: int = 65536) -> str:
     with open(path, "rb") as f:
-        for block in iter(lambda: f.read(chunk), b""):
+        if hasattr(hashlib, "file_digest"):
+            return hashlib.file_digest(f, "sha256").hexdigest()
+        h = hashlib.sha256()
+        while block := f.read(chunk):
             h.update(block)
-    return h.hexdigest()
+        return h.hexdigest()
 
 
 def sha256_text(text: str) -> str:
